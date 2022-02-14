@@ -38,6 +38,7 @@ namespace mpv {
 const hex = (n: number) => n < 16 ? '0' + n.toString(16) : n.toString(16);
 
 class AssDraw {
+	// http://www.tcax.org/docs/ass-specs.htm
 	overlay = mpv.createASS();
 	colorStr = '';
 	buf = '';
@@ -59,6 +60,9 @@ class AssDraw {
 		this.overlay.update();
 		this.buf = '';
 	}
+	raw(txt: string) {
+		this.buf += `{${this.colorStr}}${txt}\n`;
+	}
 	private part(str: string) {
 		this.buf += `{\\bord0\\shad0\\pos(0,0)${this.colorStr}\\p1}${str}{\\p0}\n`;
 	}
@@ -69,47 +73,99 @@ class AssDraw {
 
 const overlay = new AssDraw();
 const times: number[] = [];
+const findClosestTime = (t: number) =>
+	times.reduce((a, v) => Math.abs(v - t) < Math.abs(a - t) ? v : a, Infinity);
 
-const updateOverlay = () => {
+const secsToStr = (secs: number) => {
+	secs = Math.round(secs);
+	const s = secs % 60;
+	const m = ((secs / 60) | 0) % 60;
+	const h = (secs / 3600) | 0;
+	return (h > 0 ? `${h}h` : '') + (m > 0 ? `${m}m` : '') + `${s}s`;
+};
+
+let lastUpdateOverlay = 0;
+const updateOverlay = (rateLimit: boolean) => {
+	if (rateLimit) {
+		const t = mp.get_time();
+		if (t - lastUpdateOverlay > 0.1) {
+			lastUpdateOverlay = t;
+		} else {
+			return;
+		}
+	}
+
 	if (!times.length) {
 		overlay.clear();
+		return;
 	}
 	times.sort((a, b) => a - b);
 
 	const duration: number = mp.get_property_number('duration');
+	const time: number = mp.get_property_number('playback-time');
 	const baseRes = 720;
 	const {aspect} = mp.get_osd_size();
 	const width = aspect * baseRes;
-	const barH = width / 200;
+	const barH = width / 300;
 	const markerW = width / baseRes;
-	const markerH = barH * 1.5;
+	const markerH = barH * 2;
+	const closestTime = findClosestTime(time);
 
 	overlay.start();
+
+	// Bar
+	overlay.setColor(255, 255, 255, 100);
 	if (times.length >= 2) {
 		const startX = Math.floor(times[0] / duration * width);
 		const endX = Math.ceil(times[times.length - 1] / duration * width);
-		overlay.setColor(255, 255, 255, 100);
 		overlay.rect(0, 0, startX, barH);
 		overlay.rect(endX, 0, width - endX, barH);
-		overlay.setColor(255, 255, 255, 220);
+		overlay.setColor(255, 100, 100, 220);
 		overlay.rect(startX, 0, endX - startX, barH);
 	} else {
-		overlay.setColor(255, 255, 255, 150);
 		overlay.rect(0, 0, width, barH);
 	}
-	times.forEach(time => {
+
+	// Time markers
+	times.forEach(t => {
+		if (t === closestTime) {
+			overlay.setColor(100, 100, 255, 255);
+		} else {
+			overlay.setColor(255, 100, 100, 255);
+		}
+		overlay.rect(t / duration * width - markerW, 0, markerW * 2, markerH + markerW / 2);
 		overlay.setColor(0, 0, 0, 255);
-		overlay.rect(time / duration * width - markerW / 2, 0, markerW, markerH / 2);
-		overlay.setColor(255, 100, 100, 255);
-		overlay.rect(time / duration * width - markerW / 2, markerH / 2, markerW, markerH / 2);
+		overlay.rect(t / duration * width - markerW / 2, 0, markerW, markerH);
 	});
-	// TODO: list length of each segment (along with total)
+
+	// Current time
+	overlay.setColor(255, 255, 255, 255);
+	overlay.rect(time / duration * width - markerW / 2, 0, markerW, markerH);
+
+	// Time segment strings
+	let total = 0;
+	const str = times.map((t, i) => {
+		let s = `${i + 1}: ${secsToStr(t)}`;
+		if (i > 0) {
+			const diff = t - times[i - 1];
+			total += diff;
+			s += ` (total: ${secsToStr(total)}`;
+			if (i > 1) {
+				s += `, diff: ${secsToStr(diff)}`;
+			}
+			s += ')';
+		}
+		return s;
+	}).join('\\N');
+	overlay.setColor(255, 255, 255, 255);
+	overlay.raw(`{\\pos(10,10)\\fs16}${str}`);
+
 	overlay.end();
 };
 
 const clearTimes = () => {
 	times.splice(0, times.length);
-	updateOverlay();
+	updateOverlay(false);
 };
 
 mp.add_key_binding('alt+t', 'mtp:pick', () => {
@@ -122,7 +178,7 @@ mp.add_key_binding('alt+t', 'mtp:pick', () => {
 	if (times.length === 1) {
 		mp.set_property('keep-open', 'yes');
 	}
-	updateOverlay();
+	updateOverlay(false);
 });
 
 mp.add_key_binding('alt+T', 'mtp:remove', () => {
@@ -131,9 +187,9 @@ mp.add_key_binding('alt+T', 'mtp:remove', () => {
 		mp.osd_message('no time points');
 		return;
 	}
-	const closest = times.reduce((a, v) => Math.abs(v - time) < Math.abs(a -time) ? v : a, Infinity);
-	times.splice(times.indexOf(closest), 1);
-	updateOverlay();
+	const closestTime = findClosestTime(time);
+	times.splice(times.indexOf(closestTime), 1);
+	updateOverlay(false);
 });
 
 mp.register_script_message('mtp:run', (cmd: string, keepStr: string | undefined) => {
@@ -159,3 +215,4 @@ mp.register_script_message('mtp:run', (cmd: string, keepStr: string | undefined)
 });
 
 mp.register_event('file-loaded', clearTimes);
+mp.observe_property('playback-time', 'number', () => updateOverlay(true));

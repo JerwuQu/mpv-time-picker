@@ -107,8 +107,8 @@ const updateOverlay = (rateLimit: boolean) => {
 	const {aspect} = mp.get_osd_size();
 	const width = aspect * baseRes;
 	const barH = width / 300;
-	const markerW = width / baseRes;
-	const markerH = barH * 2;
+	const markerW = width / baseRes / 2;
+	const markerH = barH * 2.5;
 	const closestTime = findClosestTime(time);
 
 	overlay.start();
@@ -128,13 +128,13 @@ const updateOverlay = (rateLimit: boolean) => {
 
 	// Time markers
 	times.forEach(t => {
-		if (t === closestTime) {
-			overlay.setColor(100, 100, 255, 255);
-		} else {
-			overlay.setColor(255, 100, 100, 255);
-		}
+		overlay.setColor(255, 100, 100, 255);
 		overlay.rect(t / duration * width - markerW, 0, markerW * 2, markerH + markerW / 2);
-		overlay.setColor(0, 0, 0, 255);
+		if (t === closestTime) {
+			overlay.setColor(50, 50, 150, 255);
+		} else {
+			overlay.setColor(0, 0, 0, 255);
+		}
 		overlay.rect(t / duration * width - markerW / 2, 0, markerW, markerH);
 	});
 

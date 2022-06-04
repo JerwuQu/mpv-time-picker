@@ -36,6 +36,7 @@ namespace mpv {
 }
 
 const hex = (n: number) => n < 16 ? '0' + n.toString(16) : n.toString(16);
+const endsWith = (str: string, needle: string) => str.substring(str.length - needle.length, str.length) === needle;
 
 class AssDraw {
 	// http://www.tcax.org/docs/ass-specs.htm
@@ -199,15 +200,20 @@ mp.register_script_message('mtp:run', (cmd: string, keepStr: string | undefined)
 	}
 	const path = mp.get_property('path');
 	cmd = mp.utils.get_user_path(cmd);
-	mpv.runProcess([cmd, path].concat(times.map(t => t + '')), (stdout, error) => {
-		if (error) {
-			mp.msg.error(error);
-			mp.osd_message('ERROR: ' + error, 3);
-			return;
-		}
-		mp.msg.info(stdout);
-		mp.osd_message(stdout, 3);
-	});
+	if (endsWith(cmd, '.js') || endsWith(cmd, '.lua')) {
+		const id = mp.command_native(['load-script', cmd]).client_id;
+		mp.command_native(['script-message-to', '@' + id, 'mtp:script:run', JSON.stringify({path, times})]);
+	} else {
+		mpv.runProcess([cmd, path].concat(times.map(t => t + '')), (stdout, error) => {
+			if (error) {
+				mp.msg.error(error);
+				mp.osd_message('ERROR: ' + error, 3);
+				return;
+			}
+			mp.msg.info(stdout);
+			mp.osd_message(stdout, 3);
+		});
+	}
 
 	if (keepStr?.toLowerCase() !== 'keep') {
 		clearTimes();

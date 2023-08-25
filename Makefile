@@ -1,7 +1,7 @@
 PROJ=mpv-time-picker
 
 $(PROJ).js: $(PROJ).ts
-	tsc --lib es5 --removeComments --outFile $@ $^
+	tsc
 
 .PHONY: install clean
 install: $(PROJ).js

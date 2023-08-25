@@ -1,7 +1,6 @@
 {
-  "include": ["mpv-time-picker.ts"],
+  "include": ["*.ts"],
   "compilerOptions": {
-    "outFile": "mpv-time-picker.js",
     "target": "ES5",
     "lib": ["ES5"],
     "removeComments": true,

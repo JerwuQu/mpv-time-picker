@@ -1,11 +1,12 @@
-PROJ=mpv-time-picker
+.PHONY: all
+all: mpv-time-picker.js
 
-$(PROJ).js: $(PROJ).ts
-	tsc
+%.js: %.ts
+	tsc $^ --outFile $@
 
 .PHONY: install clean
-install: $(PROJ).js
+install: mpv-time-picker.js
 	cp $^ ~/.config/mpv/scripts/
 
 clean:
-	rm -f $(PROJ).js
+	rm -f mpv-time-picker.js

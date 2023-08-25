@@ -4,28 +4,36 @@ Simple UI to use mpv as a timestamp picker for scripts.
 
 ## Usage
 
-By default, you can use `alt+t` to add a timestamp and `alt+shift+t` to remove one.
+### Bindings
 
-To trigger a script, you can bind a hotkey in `input.conf`.
+By default, `mtp:add` is bound to `g`, `mtp:remove` to `shift+g`, and `mtp:clear` is unbound.
 
-You can either run processes, which will get the filename followed by all the timestamps as arguments:
+To trigger an action with your timstamps, you will need to run a Command.
 
-`ctrl+alt+t script-message mtp:run ~~/do-something-cool.sh`
+### Commands
 
-Or if it's a `.js` or `.lua` file, it will be loaded directly into mpv, and receive a `mtp:script:run` script message:
+Commands are sent using script messages.
 
-`ctrl+alt+t script-message mtp:run ~~/do-something-cool.js keep`
+You can bind these in `input.conf`.
 
-The `keep` is an optional flag which says to keep the timestamps after running the file, otherwise they will be cleared.
+### `mtp:run-command <command> [flags...]`
 
-### Minimal JS script example
+Runs a shell command with the current file path followed by all timestamps as arguments.
+The stdout will be shown in mpv.
 
-```js
-mp.register_script_message('mtp:script:run', function(obj) {
-	mp.msg.info('mtp:script:run ' + obj); // obj is a json object containing `path` and `times`
-	exit(); // required to properly kill the script (since they are single-use)
-});
-```
+### `mtp:run-script <path> [flags...]`
+
+Loads a `.js` or `.lua` script directly into mpv.
+The script will receive a `mtp:script-handler` script message containing a serialized JSON array of all timestamps.
+Since the script is loaded on each `mtp:run-script` it is required to `exit()` within the script to not leak memory.
+
+### Command flags
+
+- `+clear`: Clear timestamps after executing script/command.
+
+### Examples
+
+See the `example` directory.
 
 ## Building
 
@@ -33,5 +41,4 @@ Install TypeScript and run `make`.
 
 ## Installing
 
-Throw the `mpv-time-picker.js` file into `~/.config/mpv/scripts/`.
-`make install` does this too.
+Run `make install` or manually throw the `mpv-time-picker.js` file into `~/.config/mpv/scripts/`.

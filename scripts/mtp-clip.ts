@@ -1,11 +1,11 @@
 declare const mp: any;
 declare const exit: any;
 
-const fatescape = (str: string): string => str.replace(/([^\w])/gm, '\\\\\\$1');
-const fnclean = (str: string): string => str.replace(/[^\w]/gm, '_');
+const fatEscape = (str: string): string => str.replace(/([^\w])/gm, '\\\\\\$1');
+const fnClean = (str: string): string => str.replace(/[^\w]/gm, '_');
 
 function secsToStr(secs: number) {
-  const date = new Date();
+  const date = new Date(0);
   date.setSeconds(secs);
   return date.toISOString().substring(11, 19) + (secs % 1).toPrecision(2).substring(1);
 }
@@ -24,8 +24,16 @@ mp.register_script_message('mtp:script-handler', function (json: string) {
   }
   const [startTime, endTime] = timestamps;
 
+  const OPT = {
+    vflags: '-c:v libx264 -crf 23',
+    aflags: '-ac 2 -c:a libopus -b:a 128k',
+    outdir: '',
+  };
+  mp.options.read_options(OPT, 'mtpclip');
+
   const mediaTitle = mp.get_property('media-title');
-  const outPath = `${fnclean(mediaTitle)}_${secsToStr(startTime)}-${secsToStr(endTime)}.mp4`;
+  const outName = `${fnClean(mediaTitle)}_${secsToStr(startTime)}-${secsToStr(endTime)}.mp4`;
+  const outPath = OPT.outdir ? mp.utils.join_path(OPT.outdir, outName) : outName;
 
   const mediaPath = mp.get_property('path');
   const mpvTracks: any[] = mp.get_property_native('track-list');
@@ -34,6 +42,7 @@ mp.register_script_message('mtp:script-handler', function (json: string) {
     .map((t) => ({
       type: t.type,
       path: t.external ? t['external-filename'] : mediaPath,
+      id: t['id'] - 1,
       stream: t['ff-index'],
     }));
   const vTrack = trackStreams.filter((t) => t.type === 'video')[0];
@@ -42,15 +51,12 @@ mp.register_script_message('mtp:script-handler', function (json: string) {
   const sTrack = trackStreams.filter((t) => t.type === 'sub')[0];
 
   const args = ['ffmpeg', '-loglevel', 'warning']
-    .concat(flat(avTracks.map((t, i) => ['-ss', startTime + 's', '-to', endTime + 's', '-copyts', '-i', t.path])))
+    .concat(flat(avTracks.map((t) => ['-ss', startTime + 's', '-to', endTime + 's', '-copyts', '-i', t.path])))
     .concat(flat(avTracks.map((t, i) => ['-map', `${i}:${t.stream}`])))
-    // TODO: c:v config
-    .concat(vTrack ? ['-c:v', 'libx264', '-crf', '23'] : [])
-    // TODO: c:a config
-    .concat(aTrack ? ['-c:a', 'aac', '-b:a', '192k'] : [])
-    .concat(sTrack ? ['-vf', `subtitles=filename=${fatescape(sTrack.path)}:si=${sTrack.stream}`] : [])
+    .concat(vTrack ? OPT.vflags.split(' ') : [])
+    .concat(aTrack ? OPT.aflags.split(' ') : [])
+    .concat(sTrack ? ['-vf', `subtitles=filename=${fatEscape(sTrack.path)}:si=${sTrack.id}`] : [])
     .concat(['-ss', startTime + 's'])
-    // TODO: output config
     .concat(['-y', outPath]);
 
   mp.osd_message('mtp encoding...', 3);

@@ -43,10 +43,9 @@ function hex(n: number) {
 }
 
 function secsToStr(secs: number) {
-  const s = Math.round((100 * secs) % 6000) / 100;
-  const m = ((secs / 60) | 0) % 60;
-  const h = (secs / 3600) | 0;
-  return (h > 0 ? `${h}h` : '') + (m > 0 ? `${m}m` : '') + `${s}s`;
+  const date = new Date(0);
+  date.setSeconds(secs);
+  return date.toISOString().substring(11, 19) + (secs % 1).toPrecision(2).substring(1);
 }
 
 class AssDraw {
@@ -94,6 +93,7 @@ class TimePicker {
   draw = new AssDraw();
   timestamps: number[] = [];
   lastOverlayUpdate = 0;
+  oldKeepOpen?: string = undefined;
 
   constructor() {
     mp.add_key_binding('g', 'mtp:add', () => {
@@ -103,10 +103,7 @@ class TimePicker {
         return;
       }
       this.timestamps.push(time);
-      if (this.timestamps.length === 1) {
-        mp.set_property('keep-open', 'yes');
-      }
-      this.updateOverlay();
+      this.updateTimeCount();
     });
 
     mp.add_key_binding('G', 'mtp:remove', () => {
@@ -117,7 +114,7 @@ class TimePicker {
       }
       const closestTime = this.closestTime(time);
       this.timestamps.splice(this.timestamps.indexOf(closestTime), 1);
-      this.updateOverlay();
+      this.updateTimeCount();
     });
 
     mp.add_key_binding(undefined, 'mtp:clear', () => {
@@ -156,9 +153,19 @@ class TimePicker {
   closestTime(t: number) {
     return this.timestamps.reduce((a, v) => (Math.abs(v - t) < Math.abs(a - t) ? v : a), Infinity);
   }
+  updateTimeCount() {
+    if (this.timestamps.length === 0 && this.oldKeepOpen !== undefined) {
+      mp.set_property('keep-open', this.oldKeepOpen);
+      this.oldKeepOpen = undefined;
+    } else if (this.timestamps.length === 1 && this.oldKeepOpen === undefined) {
+      this.oldKeepOpen = mp.get_property('keep-open');
+      mp.set_property('keep-open', 'yes');
+    }
+    this.updateOverlay();
+  }
   clearTimes() {
     this.timestamps.splice(0, this.timestamps.length);
-    this.updateOverlay();
+    this.updateTimeCount();
   }
   runHandler(fn: () => void, flags: string[]) {
     if (!this.timestamps.length) {

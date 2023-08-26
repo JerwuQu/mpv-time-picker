@@ -1,2 +1,4 @@
 mpv-time-picker.js
 *.mkv
+*.mp4
+scripts/*.js

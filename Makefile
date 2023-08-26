@@ -1,5 +1,5 @@
 .PHONY: all
-all: mpv-time-picker.js
+all: mpv-time-picker.js scripts/mtp-clip.js
 
 %.js: %.ts
 	tsc $^ --outFile $@
@@ -9,4 +9,4 @@ install: mpv-time-picker.js
 	cp $^ ~/.config/mpv/scripts/
 
 clean:
-	rm -f mpv-time-picker.js
+	rm -f mpv-time-picker.js scripts/*.js

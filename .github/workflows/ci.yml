@@ -1,0 +1,40 @@
+name: Build
+on: [push]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Install deps
+        run: sudo apt install node-typescript
+      - name: Make
+        run: make all
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ci-${{ github.sha }}
+          release_name: CI build
+          prerelease: true
+      - name: Upload release asset 1
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: mpv-time-picker.js
+          asset_name: mpv-time-picker.js
+          asset_content_type: application/octet-stream
+      - name: Upload release asset 2
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: scripts/mtp-clip.js
+          asset_name: mtp-clip.js
+          asset_content_type: application/octet-stream

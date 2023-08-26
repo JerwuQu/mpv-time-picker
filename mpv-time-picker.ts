@@ -206,12 +206,14 @@ class TimePicker {
     const baseRes = 720;
     const { aspect } = mp.get_osd_size();
     const width = aspect * baseRes;
-    const barH = width / 200;
-    const borderSz = width / 600;
-    const tsMarkerW = width / 300;
-    const tsMarkerH = barH * 1.5;
-    const ctMarkerW = tsMarkerW / 2;
-    const ctMarkerH = barH * 2.5;
+    const barH = width / 180;
+    const borderSz = width / 720;
+    const slimMarkerW = width / 1440;
+    const slimMarkerHext = width / 180;
+    const tsMarkerW = width / 720;
+    const tsMarkerH = barH * 1.25;
+    const ctMarkerW = tsMarkerW / 1.5;
+    const ctMarkerH = barH * 1.5;
     const closestTime = this.closestTime(time);
 
     this.draw.start();
@@ -233,6 +235,8 @@ class TimePicker {
 
     // Current time
     this.draw.setColor(100, 100, 255, 255);
+    timeBlock(time, slimMarkerW, ctMarkerH + slimMarkerHext);
+    this.draw.setColor(100, 100, 255, 255);
     timeBlock(time, ctMarkerW + borderSz * 2, ctMarkerH + borderSz);
     this.draw.setColor(255, 255, 255, 255);
     timeBlock(time, ctMarkerW, ctMarkerH);
@@ -240,7 +244,7 @@ class TimePicker {
     // Time markers
     this.timestamps.forEach((t) => {
       this.draw.setColor(255, 100, 100, 255);
-      timeBlock(t, borderSz, tsMarkerH + borderSz * 2);
+      timeBlock(t, slimMarkerW, tsMarkerH + slimMarkerHext);
       this.draw.setColor(255, 100, 100, 255);
       timeBlock(t, tsMarkerW + borderSz * 2, tsMarkerH + borderSz);
       this.draw.setColor(255, 255, 255, 255);

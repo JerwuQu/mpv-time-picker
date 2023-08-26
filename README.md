@@ -27,6 +27,10 @@ Loads a `.js` or `.lua` script directly into mpv.
 The script will receive a `mtp:script-handler` script message containing a serialized JSON array of all timestamps.
 Since the script is loaded on each `mtp:run-script` it is required to `exit()` within the script to not leak memory.
 
+### `mtp:send-message <name> [flags...]`
+
+Send an mpv script message by the given name with a serialized JSON array of all timestamps as argument.
+
 ### Command flags
 
 - `+clear`: Clear timestamps after executing script/command.

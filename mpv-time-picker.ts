@@ -145,6 +145,12 @@ class TimePicker {
       }, flags);
     });
 
+    mp.register_script_message('mtp:send-message', (message: string, ...flags: string[]) => {
+      this.runHandler(() => {
+        mp.command_native(['script-message', message, JSON.stringify(this.timestamps)]);
+      }, flags);
+    });
+
     mp.register_event('file-loaded', this.clearTimes.bind(this));
     mp.observe_property('playback-time', undefined, () => this.updateOverlay(true));
     mp.observe_property('video-params', undefined, () => this.updateOverlay());

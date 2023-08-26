@@ -14,12 +14,12 @@ function flat<T>(arr: T[][]): T[] {
   return [].concat.apply([], arr);
 }
 
-mp.register_script_message('mtp:script-handler', function (json: string) {
+// Bound as: ctrl+g script-message mtp:send-message mtp-clip:run
+mp.register_script_message('mtp-clip:run', function (json: string) {
   const timestamps: number[] = JSON.parse(json);
   mp.msg.info(json);
   if (timestamps.length != 2) {
-    mp.osd_message('Expected 2 time points');
-    exit();
+    mp.osd_message('mtp-clip expects 2 time points');
     return;
   }
   const [startTime, endTime] = timestamps;
@@ -59,7 +59,7 @@ mp.register_script_message('mtp:script-handler', function (json: string) {
     .concat(['-ss', startTime + 's'])
     .concat(['-y', outPath]);
 
-  mp.osd_message('mtp encoding...', 3);
+  mp.osd_message('mtp-clip encoding...', 3);
   mp.msg.info(JSON.stringify(args));
   mp.command_native_async(
     {
@@ -71,13 +71,12 @@ mp.register_script_message('mtp:script-handler', function (json: string) {
     },
     (_success, result) => {
       if (result.error_string || result.status != 0) {
-        mp.osd_message('mtp encoding error! see console', 3);
+        mp.osd_message('mtp-clip encoding error! see console', 3);
         mp.msg.error(JSON.stringify(result));
       } else {
-        mp.osd_message('mtp encoding done!', 3);
+        mp.osd_message('mtp-clip encoding done!', 3);
         mp.msg.info(JSON.stringify(result));
       }
-      exit();
     },
   );
 });
